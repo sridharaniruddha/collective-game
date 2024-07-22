@@ -143,9 +143,15 @@ class NewScene extends Phaser.Scene
             gameObject.clearTint();
             const targetCell = this.findNearestCell(gameObject.x, gameObject.y);
             if (targetCell) {
-                gameObject.x = targetCell.x;
-                gameObject.y = targetCell.y;
-                this.checkMerge(gameObject, targetCell);
+                const canPlace = this.canPlaceObject(gameObject, targetCell);
+                if (canPlace) {
+                    gameObject.x = targetCell.x;
+                    gameObject.y = targetCell.y;
+                    this.checkMerge(gameObject, targetCell);
+                } else {
+                    gameObject.x = gameObject.originalX;
+                    gameObject.y = gameObject.originalY;
+                }
             } else {
                 gameObject.x = gameObject.originalX;
                 gameObject.y = gameObject.originalY;
@@ -217,6 +223,21 @@ class NewScene extends Phaser.Scene
             }
         }
         return null;
+    }
+
+    canPlaceObject(gameObject, targetCell) {
+        const objectsInCell = this.children.getChildren().filter(child => 
+            child !== gameObject &&
+            child.texture &&
+            child.x === targetCell.x &&
+            child.y === targetCell.y
+        );
+
+        if (objectsInCell.length === 0) {
+            return true;
+        }
+
+        return objectsInCell[0].texture.key === gameObject.texture.key;
     }
 
     checkMerge(gameObject, targetCell) {
