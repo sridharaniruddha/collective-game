@@ -61,6 +61,8 @@ class NewScene extends Phaser.Scene
         // Load any assets needed for the new scene
         this.load.image('script', `https://play.rosebud.ai/assets/script.png?NxGi`);
         this.load.image('clapper', 'https://play.rosebud.ai/assets/clapper-board.png?DdiR');
+        this.load.image('camera', 'https://play.rosebud.ai/assets/camcorder.png?8gqg');
+        this.load.image('trophy', 'https://play.rosebud.ai/assets/trophy.png?3RrK');
     }
 
     create ()
@@ -76,6 +78,9 @@ class NewScene extends Phaser.Scene
 
         // Store grid cells for later use
         this.gridCells = [];
+
+        // Initialize trophy count
+        this.trophyCount = 0;
 
         let cellIndex = 0;
         for (let row = 0; row < gridSize; row++) {
@@ -107,14 +112,7 @@ class NewScene extends Phaser.Scene
                 });
 
                 // Create script image for each cell
-                const script = this.add.image(x, y, 'script');
-                script.setDisplaySize(cellSize - 10, cellSize - 10);
-                
-                // Make script draggable
-                script.setInteractive();
-                this.input.setDraggable(script);
-                script.originalX = x;
-                script.originalY = y;
+                this.createScriptImage(x, y, cellSize);
 
                 cellIndex++;
             }
@@ -155,8 +153,8 @@ class NewScene extends Phaser.Scene
         });
 
         // Add timer
-        this.timeLeft = 120; // 2 minutes in seconds
-        this.timerText = this.add.text(20, 550, 'Time: 2:00', { fontSize: '24px', fill: '#fff' });
+        this.timeLeft = 60; // 1 minute in seconds
+        this.timerText = this.add.text(20, 550, 'Time: 1:00', { fontSize: '24px', fill: '#fff' });
         
         // Start the timer
         this.timer = this.time.addEvent({
@@ -165,6 +163,22 @@ class NewScene extends Phaser.Scene
             callbackScope: this,
             loop: true
         });
+
+        // Add trophy count text
+        this.trophyText = this.add.text(700, 550, 'Trophies: 0/3', { fontSize: '24px', fill: '#fff' });
+    }
+
+    createScriptImage(x, y, cellSize) {
+        const script = this.add.image(x, y, 'script');
+        script.setDisplaySize(cellSize - 10, cellSize - 10);
+        
+        // Make script draggable
+        script.setInteractive();
+        this.input.setDraggable(script);
+        script.originalX = x;
+        script.originalY = y;
+
+        return script;
     }
 
     updateTimer() {
@@ -176,7 +190,11 @@ class NewScene extends Phaser.Scene
         if (this.timeLeft <= 0) {
             this.timer.remove();
             this.timerText.setText('Time\'s up!');
-            // Add any game over logic here
+            if (this.trophyCount < 3) {
+                this.gameOver('You lose! Not enough trophies.');
+            } else {
+                this.gameOver('You win!');
+            }
         }
     }
 
@@ -204,25 +222,92 @@ class NewScene extends Phaser.Scene
     checkMerge(gameObject, targetCell) {
         const overlappingObjects = this.children.getChildren().filter(child => {
             return child !== gameObject && 
-                   child.texture && child.texture.key === 'script' &&
+                   child.texture && child.texture.key === gameObject.texture.key &&
                    child.x === targetCell.x && child.y === targetCell.y;
         });
 
-        if (overlappingObjects.length > 0) {
-            // Merge the scripts
+        if (overlappingObjects.length > 0 && gameObject.texture.key !== 'trophy') {
+            // Merge the objects
             gameObject.destroy();
             overlappingObjects[0].destroy();
 
-            // Create a clapper board
-            const clapper = this.add.image(targetCell.x, targetCell.y, 'clapper');
-            clapper.setDisplaySize(targetCell.width - 10, targetCell.height - 10);
+            let newObject;
+            if (gameObject.texture.key === 'script') {
+                newObject = this.add.image(targetCell.x, targetCell.y, 'clapper');
+            } else if (gameObject.texture.key === 'clapper') {
+                newObject = this.add.image(targetCell.x, targetCell.y, 'camera');
+            } else if (gameObject.texture.key === 'camera') {
+                newObject = this.add.image(targetCell.x, targetCell.y, 'trophy');
+                this.trophyCount++;
+                this.trophyText.setText(`Trophies: ${this.trophyCount}/3`);
+                if (this.trophyCount >= 3) {
+                    this.gameOver('You win!');
+                }
+            } else {
+                // If it's not a script, clapper, or camera, just create a new script
+                newObject = this.add.image(targetCell.x, targetCell.y, 'script');
+            }
+
+            newObject.setDisplaySize(targetCell.width - 10, targetCell.height - 10);
             
-            // Make clapper draggable
-            clapper.setInteractive();
-            this.input.setDraggable(clapper);
-            clapper.originalX = targetCell.x;
-            clapper.originalY = targetCell.y;
+            // Make new object draggable
+            newObject.setInteractive();
+            this.input.setDraggable(newObject);
+            newObject.originalX = targetCell.x;
+            newObject.originalY = targetCell.y;
+
+            // Check for empty cells and fill them
+            this.fillEmptyCells();
+        } else if (gameObject.texture.key === 'trophy') {
+            // If it's a trophy, just place it in the target cell without merging
+            gameObject.x = targetCell.x;
+            gameObject.y = targetCell.y;
+            gameObject.originalX = targetCell.x;
+            gameObject.originalY = targetCell.y;
         }
+    }
+
+    fillEmptyCells() {
+        this.gridCells.forEach(cell => {
+            const objectsInCell = this.children.getChildren().filter(child => 
+                child.texture && (child.texture.key === 'script' || child.texture.key === 'clapper' || child.texture.key === 'camera' || child.texture.key === 'trophy') &&
+                child.x === cell.x && child.y === cell.y
+            );
+
+            if (objectsInCell.length === 0) {
+                // Cell is empty, create a new script image
+                this.createScriptImage(cell.x, cell.y, cell.width);
+            }
+        });
+    }
+
+    gameOver(message) {
+        // Stop the timer
+        this.timer.remove();
+
+        // Disable dragging
+        this.input.off('drag');
+        this.input.off('dragend');
+
+        // Display game over message
+        const gameOverText = this.add.text(400, 300, message, {
+            fontSize: '48px',
+            fill: '#fff',
+            backgroundColor: '#000',
+            padding: { left: 15, right: 15, top: 10, bottom: 10 }
+        }).setOrigin(0.5);
+
+        // Add a restart button
+        const restartButton = this.add.text(400, 400, 'Restart', {
+            fontSize: '32px',
+            fill: '#fff',
+            backgroundColor: '#000',
+            padding: { left: 15, right: 15, top: 10, bottom: 10 }
+        }).setOrigin(0.5).setInteractive();
+
+        restartButton.on('pointerdown', () => {
+            this.scene.restart();
+        });
     }
 }
 
