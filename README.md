@@ -34,6 +34,9 @@ The following images show the game's appearance and functionality:
 
 ![Application Screenshot](assets/images/screenshot.png)
 ![Application Screenshot](assets/images/screenshot2.png)
+![Application Screenshot](assets/images/screenshot3.png)
+![Application Screenshot](assets/images/screenshot4.png)
+![Application Screenshot](assets/images/screenshot5.png)
 
 ## License
 
