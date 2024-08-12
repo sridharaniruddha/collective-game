@@ -22,11 +22,11 @@ This game is developed as part of an internship project with the primary goal of
 
 ## Live Link
 
-[Play the game online](https://your-github-username.github.io/Unknown-Artist---Refugee-Journey-Merging-Game/)
+[Play the game online](https://github.com/sridharaniruddha/collective-game/)
 
 ## Live on RosebudAI
 
-[Play on RosebudAI](https://play.rosebud.ai/games/your-game-id)
+[Play on RosebudAI](https://play.rosebud.ai/games/e8c92f4d-132a-42f6-a44d-7264d6cb96dd)
 
 ## Usage
 
